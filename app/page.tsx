@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Entry = {
   term: string;
@@ -106,7 +106,166 @@ const entries: Record<string, Entry> = {
   },
 };
 
-const suggestions = ["関税", "停戦", "インフレ"];
+function makeEntry(
+  term: string,
+  reading: string,
+  category: string,
+  oneLine: string,
+  meaning: string,
+  analogy: string,
+  background: { title: string; text: string }[],
+  related: { term: string; text: string }[],
+): Entry {
+  return {
+    term,
+    reading,
+    category,
+    oneLine,
+    meaning,
+    analogy,
+    background,
+    related,
+    news: [
+      {
+        source: "Googleニュース",
+        title: `${term}をめぐる最近の動きをわかりやすく`,
+        summary: `直近のニュースで「${term}」がどのように使われているか確認できます。`,
+        time: "最新",
+      },
+      {
+        source: "ニュース解説",
+        title: `いま知っておきたい「${term}」のポイント`,
+        summary: "複数の報道を見比べて、出来事の背景まで理解するための記事を探せます。",
+        time: "1か月以内",
+      },
+    ],
+  };
+}
+
+Object.assign(entries, {
+  "骨太の方針": makeEntry(
+    "骨太の方針", "ほねぶとのほうしん", "政治",
+    "政府が来年度以降のお金の使い方や政策の方向を示す、大きな設計図。",
+    "正式には「経済財政運営と改革の基本方針」といいます。景気、社会保障、子育て、防衛、デジタル化など、国がこれから何を重視するかを毎年まとめます。これをもとに各省庁が予算案を作るため、暮らしに関わる政策の出発点になります。",
+    "家を建てる前に作る全体の設計図です。まだ細かな材料費までは決まっていませんが、どんな家にするかという方向が決まります。",
+    [
+      { title: "法律や予算そのものではない", text: "方針を発表しただけで、すぐ制度が変わるわけではありません。その後、予算案や法律案に具体化され、国会で議論されます。" },
+      { title: "なぜ毎年ニュースになる？", text: "限られた税金をどこに多く使うかで、世代や地域、産業への影響が変わるからです。" },
+    ],
+    [{ term: "予算案", text: "国が1年間に集めるお金と使うお金の計画。" }, { term: "閣議決定", text: "内閣として方針を正式に決めること。" }, { term: "社会保障", text: "年金、医療、介護など生活を支える制度。" }],
+  ),
+  "熱中症警戒アラート": makeEntry(
+    "熱中症警戒アラート", "ねっちゅうしょうけいかいあらーと", "社会",
+    "暑さで健康を害する危険がとても高い日に、国が出す注意情報。",
+    "気温だけでなく、湿度や日差しを合わせた「暑さ指数」が基準を超えると予想される地域に発表されます。発表された日は、外出や運動をできるだけ避け、冷房を使い、のどが渇く前に水分を取ることが大切です。",
+    "大雨警報の暑さ版に近いものです。「少し暑い」ではなく、いつもの生活を変えて命を守る行動が必要という合図です。",
+    [
+      { title: "暑さ指数とは", text: "気温、湿度、日差しや地面からの熱をまとめて、体への負担を表す数字です。" },
+      { title: "特別警戒アラートとの違い", text: "さらに広い地域で過去に例のない危険な暑さが予想される場合は、より強い「熱中症特別警戒アラート」が出ます。" },
+    ],
+    [{ term: "暑さ指数", text: "人の体が感じる暑さの危険度を示す指数。" }, { term: "猛暑日", text: "最高気温が35度以上の日。" }, { term: "クーリングシェルター", text: "暑さから一時的に避難できる冷房のある施設。" }],
+  ),
+  "弾道ミサイル": makeEntry(
+    "弾道ミサイル", "だんどうみさいる", "安全保障",
+    "ロケットのように高く上がり、弧を描いて目標へ落ちる兵器。",
+    "発射後に大気圏の高いところまで上がり、重力を利用して非常に速い速度で落下します。飛ぶ距離によって短距離・中距離・大陸間弾道ミサイルなどに分けられます。核兵器などを運べるものもあるため、発射や実験は国際的な緊張につながります。",
+    "遠くへ投げたボールが山なりに飛ぶ動きを、はるかに大きく速くしたような軌道です。",
+    [
+      { title: "なぜ迎撃が難しい？", text: "高速で飛び、発見してから到達までの時間が短いからです。途中で軌道を変えるタイプもあります。" },
+      { title: "Jアラートとは", text: "日本に飛来する可能性があるとき、国が携帯電話や防災無線で避難を呼びかける仕組みです。" },
+    ],
+    [{ term: "Jアラート", text: "緊急情報を国から住民へすばやく伝える仕組み。" }, { term: "迎撃", text: "飛んでくるミサイルを別のミサイルなどで撃ち落とすこと。" }, { term: "抑止力", text: "反撃されると思わせ、攻撃を思いとどまらせる力。" }],
+  ),
+  "皇室典範": makeEntry(
+    "皇室典範", "こうしつてんぱん", "政治",
+    "天皇や皇族に関する基本的な決まりを定めた法律。",
+    "天皇の地位をだれがどの順番で受け継ぐか、皇族の身分や結婚、摂政などについて定めています。日本国憲法は天皇を「日本国と日本国民統合の象徴」としており、皇室典範はその制度を具体的に支える法律です。",
+    "学校全体の理念が憲法だとすれば、皇室典範は皇室制度についての詳しい校則にあたります。",
+    [
+      { title: "なぜ改正が議論される？", text: "皇族の人数が減っていることや、将来にわたり皇位継承を安定させる方法を考える必要があるためです。" },
+      { title: "歴史との関係", text: "現在の皇室典範は日本国憲法と同じ1947年に施行され、国会で改正できる法律になりました。" },
+    ],
+    [{ term: "皇位継承", text: "天皇の地位を次の人が受け継ぐこと。" }, { term: "象徴天皇制", text: "天皇が政治を行わず、国と国民統合の象徴である制度。" }, { term: "摂政", text: "天皇が務めを行えないときに代わって国事行為を行う人。" }],
+  ),
+  "サプライチェーン": makeEntry(
+    "サプライチェーン", "さぷらいちぇーん", "経済",
+    "原料の調達から商品が消費者に届くまでの、企業や物流のつながり。",
+    "一つの商品も、原料、部品、組み立て、輸送、販売という多くの段階を通ります。そのどこかが戦争、災害、感染症、輸出規制などで止まると、遠い国の商品まで不足したり値上がりしたりします。",
+    "給食が、農家・食品工場・配送トラック・調理室というリレーで届くようなものです。一か所が止まると給食を出せません。",
+    [
+      { title: "強靱化とは", text: "調達先を一つの国や会社だけに頼らず、別の入手先や在庫を用意して止まりにくくすることです。" },
+      { title: "安全保障との関係", text: "半導体や医薬品など、国の安全や生活に欠かせない物を安定して確保することが重要になっています。" },
+    ],
+    [{ term: "輸出規制", text: "特定の商品を外国へ売ることを制限する政策。" }, { term: "物流", text: "物を保管し、必要な場所へ運ぶ仕組み。" }, { term: "経済安全保障", text: "経済の仕組みを通じて国の安全や暮らしを守る考え方。" }],
+  ),
+  "重要鉱物": makeEntry(
+    "重要鉱物", "じゅうようこうぶつ", "経済",
+    "産業や安全保障に欠かせないのに、手に入りにくくなる心配がある鉱物。",
+    "レアアース、リチウム、コバルトなどが代表例です。スマートフォン、電気自動車、半導体、再生可能エネルギー設備などに使われます。産地や精製する国が偏っているため、国際関係が悪化すると供給が止まるおそれがあります。",
+    "料理に欠かせない特別な調味料を、一軒のお店からしか買えない状態に似ています。",
+    [
+      { title: "なぜ国が確保する？", text: "企業だけでは対応しにくい長期的な供給リスクがあり、備蓄や海外鉱山への投資、リサイクルを支援するためです。" },
+      { title: "レアアースとの違い", text: "レアアースは17種類の元素の総称。重要鉱物は、希少性だけでなく産業上の重要性も含めた広い呼び方です。" },
+    ],
+    [{ term: "レアアース", text: "磁石や電子部品に使われる17種類の元素の総称。" }, { term: "備蓄", text: "不足に備えてあらかじめためておくこと。" }, { term: "都市鉱山", text: "使用済み製品を資源として回収する考え方。" }],
+  ),
+  "短観": makeEntry(
+    "短観", "たんかん", "経済",
+    "日本銀行が企業に景気の感じ方を聞く、大規模なアンケート調査。",
+    "正式には「全国企業短期経済観測調査」。約1万社に、景気が良いか悪いか、売上や設備投資をどう見ているかなどを聞きます。企業の生の感覚を早く知れるため、景気や金利の先行きを考える材料になります。",
+    "全国の会社に取る『景気の健康診断アンケート』です。",
+    [
+      { title: "業況判断DIとは", text: "「良い」と答えた企業の割合から「悪い」の割合を引いた数字。プラスが大きいほど景気が良いと感じる企業が多いことを示します。" },
+      { title: "だれが注目する？", text: "政府、投資家、企業、日銀が政策や投資を考えるために注目します。" },
+    ],
+    [{ term: "日本銀行", text: "お札を発行し、物価や金融の安定を担う日本の中央銀行。" }, { term: "景気", text: "社会全体のお金の動きや経済活動の状態。" }, { term: "DI", text: "良いと答えた割合と悪いと答えた割合の差。" }],
+  ),
+  "世界遺産委員会": makeEntry(
+    "世界遺産委員会", "せかいいさんいいんかい", "国際",
+    "世界遺産への登録や保全状況を話し合う、ユネスコの委員会。",
+    "21の国からなる委員会が毎年集まり、候補地を世界遺産に登録するか、すでに登録された場所がきちんと守られているかを審査します。価値が失われる危険が高い場所は「危機遺産」に指定されることもあります。",
+    "世界の大切な宝物を、新しくリストに加えるか、きちんと守れているかを確認する会議です。",
+    [
+      { title: "登録されれば終わりではない", text: "開発や観光客の増加で価値を損なわないよう、登録後も国は保全状況を報告します。" },
+      { title: "ユネスコとは", text: "教育、科学、文化を通じて平和を目指す国連の専門機関です。" },
+    ],
+    [{ term: "ユネスコ", text: "教育・科学・文化を担当する国連の専門機関。" }, { term: "顕著な普遍的価値", text: "国境を越えて人類全体にとって大切だと認められる価値。" }, { term: "危機遺産", text: "戦争や災害、開発などで価値が危ぶまれる世界遺産。" }],
+  ),
+});
+
+const trendingTerms = [
+  "骨太の方針",
+  "熱中症警戒アラート",
+  "弾道ミサイル",
+  "皇室典範",
+  "停戦",
+  "関税",
+  "サプライチェーン",
+  "重要鉱物",
+  "短観",
+  "世界遺産委員会",
+];
+
+const suggestions = ["骨太の方針", "熱中症警戒アラート", "関税"];
+
+type QuizQuestion = {
+  term: string;
+  choices: string[];
+  correct: number;
+};
+
+function shuffled<T>(values: T[]) {
+  return [...values].sort(() => Math.random() - 0.5);
+}
+
+function makeQuizQuestion(term: string): QuizQuestion {
+  const correctText = entries[term].oneLine;
+  const wrong = shuffled(
+    trendingTerms.filter((candidate) => candidate !== term).map((candidate) => entries[candidate].oneLine),
+  ).slice(0, 3);
+  const choices = shuffled([correctText, ...wrong]);
+  return { term, choices, correct: choices.indexOf(correctText) };
+}
 
 function newsUrl(term: string, title: string) {
   return `https://news.google.com/search?q=${encodeURIComponent(`${term} ${title}`)}&hl=ja&gl=JP&ceid=JP:ja`;
@@ -116,20 +275,77 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("関税");
   const [searched, setSearched] = useState(true);
+  const [history, setHistory] = useState<string[]>([]);
+  const [quizTerms, setQuizTerms] = useState<string[]>([]);
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
+  const [quizScore, setQuizScore] = useState(0);
+  const [quizFinished, setQuizFinished] = useState(false);
   const entry = useMemo(() => entries[active] ?? entries["関税"], [active]);
+
+  useEffect(() => {
+    let savedHistory: string[] = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem("kotonoha-history") ?? "[]");
+      if (Array.isArray(saved)) {
+        savedHistory = saved.filter((word) => typeof word === "string" && entries[word]).slice(0, 10);
+      }
+    } catch {}
+    const timer = window.setTimeout(() => setHistory(savedHistory), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function search(value: string) {
     const clean = value.trim();
     if (!clean) return;
-    setActive(entries[clean] ? clean : "関税");
+    const matched = entries[clean] ? clean : "関税";
+    setActive(matched);
     setQuery(clean);
     setSearched(true);
+    if (entries[clean]) {
+      setHistory((current) => {
+        const next = [clean, ...current.filter((word) => word !== clean)].slice(0, 10);
+        localStorage.setItem("kotonoha-history", JSON.stringify(next));
+        return next;
+      });
+    }
     setTimeout(() => document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
     search(query);
+  }
+
+  function startQuiz() {
+    const source = Array.from(new Set([...history, ...trendingTerms]));
+    const selected = shuffled(source).slice(0, 10);
+    setQuizTerms(selected);
+    setQuizIndex(0);
+    setQuizQuestion(makeQuizQuestion(selected[0]));
+    setQuizAnswer(null);
+    setQuizScore(0);
+    setQuizFinished(false);
+    setTimeout(() => document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+  }
+
+  function answerQuiz(index: number) {
+    if (!quizQuestion || quizAnswer !== null) return;
+    setQuizAnswer(index);
+    if (index === quizQuestion.correct) setQuizScore((score) => score + 1);
+  }
+
+  function nextQuiz() {
+    const nextIndex = quizIndex + 1;
+    if (nextIndex >= quizTerms.length) {
+      setQuizFinished(true);
+      setQuizQuestion(null);
+      return;
+    }
+    setQuizIndex(nextIndex);
+    setQuizQuestion(makeQuizQuestion(quizTerms[nextIndex]));
+    setQuizAnswer(null);
   }
 
   return (
@@ -140,8 +356,13 @@ export default function Home() {
           <span>コトノハ</span>
         </a>
         <nav aria-label="メインメニュー">
+          <a href="#monthly">今月の10語</a>
+          <a href="#quiz">10問クイズ</a>
           <a href="#howto">このサイトについて</a>
-          <button className="history-button" type="button" onClick={() => alert("検索履歴は次のバージョンで保存できるようになります。")}>◷ 検索履歴</button>
+          <button className="history-button" type="button" onClick={() => {
+            if (!history.length) return alert("検索履歴はまだありません。気になる言葉を調べてみましょう。");
+            search(history[0]);
+          }}>◷ 検索履歴 {history.length ? `(${history.length})` : ""}</button>
         </nav>
       </header>
 
@@ -160,6 +381,26 @@ export default function Home() {
           {suggestions.map((word) => <button key={word} onClick={() => search(word)}>#{word}</button>)}
         </div>
         <div className="scroll-hint"><span>SCROLL</span><i /></div>
+      </section>
+
+      <section className="monthly" id="monthly">
+        <div className="monthly-heading">
+          <div>
+            <p className="section-label">MONTHLY KEYWORDS · 2026.06.24—07.24</p>
+            <h2>最近1か月のニュースがわかる<br /><em>10のことば</em></h2>
+          </div>
+          <p>政治・国際・経済・社会の主要な報道から、<br />背景を知るとニュースが読みやすくなる言葉を選びました。</p>
+        </div>
+        <div className="monthly-grid">
+          {trendingTerms.map((word, index) => (
+            <button key={word} type="button" onClick={() => search(word)}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div><small>{entries[word].category}</small><b>{word}</b><p>{entries[word].oneLine}</p></div>
+              <i>→</i>
+            </button>
+          ))}
+        </div>
+        <p className="selection-note">選定期間：2026年6月24日〜7月24日。首相官邸、政府機関、主要報道の公開情報をもとに選定。</p>
       </section>
 
       {searched && (
@@ -232,6 +473,66 @@ export default function Home() {
           </section>
         </section>
       )}
+
+      <section className="quiz-section" id="quiz">
+        <div className="quiz-intro">
+          <div>
+            <p className="section-label">NEWS WORD QUIZ</p>
+            <h2>ニュース単語<br /><em>10問クイズ</em></h2>
+            <p>最近1か月の10語と、あなたが過去に検索した言葉からランダムに出題。4つの選択肢から、いちばん近い意味を選びましょう。</p>
+          </div>
+          {!quizQuestion && !quizFinished && (
+            <button className="quiz-start" type="button" onClick={startQuiz}>クイズをはじめる <span>→</span></button>
+          )}
+        </div>
+
+        {quizQuestion && (
+          <div className="quiz-card">
+            <div className="quiz-progress">
+              <span>QUESTION {quizIndex + 1} / {quizTerms.length}</span>
+              <div><i style={{ width: `${((quizIndex + 1) / quizTerms.length) * 100}%` }} /></div>
+              <b>{quizScore} pt</b>
+            </div>
+            <p className="quiz-prompt">「{quizQuestion.term}」の意味として、もっとも近いものは？</p>
+            <div className="quiz-choices">
+              {quizQuestion.choices.map((choice, index) => {
+                const isCorrect = index === quizQuestion.correct;
+                const isSelected = index === quizAnswer;
+                const state = quizAnswer === null ? "" : isCorrect ? "correct" : isSelected ? "wrong" : "muted";
+                return (
+                  <button key={choice} className={state} type="button" onClick={() => answerQuiz(index)}>
+                    <span>{String.fromCharCode(65 + index)}</span><p>{choice}</p>
+                    {quizAnswer !== null && isCorrect && <b>✓</b>}
+                    {quizAnswer !== null && isSelected && !isCorrect && <b>×</b>}
+                  </button>
+                );
+              })}
+            </div>
+            {quizAnswer !== null && (
+              <div className="quiz-explanation" aria-live="polite">
+                <div className={quizAnswer === quizQuestion.correct ? "good" : "try"}>
+                  {quizAnswer === quizQuestion.correct ? "正解！" : "おしい！"}
+                </div>
+                <div>
+                  <h3>{quizQuestion.term}<small>{entries[quizQuestion.term].reading}</small></h3>
+                  <p>{entries[quizQuestion.term].meaning}</p>
+                </div>
+                <button type="button" onClick={nextQuiz}>{quizIndex + 1 === quizTerms.length ? "結果を見る" : "次の問題"} →</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {quizFinished && (
+          <div className="quiz-result">
+            <span>YOUR SCORE</span>
+            <strong>{quizScore}<small>/ 10</small></strong>
+            <h3>{quizScore >= 8 ? "ニュース博士です！" : quizScore >= 5 ? "いい調子です！" : "ここから伸びます！"}</h3>
+            <p>{quizScore >= 8 ? "言葉の意味と背景がしっかり身についています。" : "解説を読み直して、もう一度挑戦してみましょう。"}</p>
+            <button type="button" onClick={startQuiz}>もう一度挑戦する ↻</button>
+          </div>
+        )}
+      </section>
 
       <section className="howto" id="howto">
         <p className="section-label">コトノハの使い方</p>
