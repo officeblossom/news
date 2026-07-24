@@ -170,7 +170,7 @@ ${news.map((item) => `- ${item.title}（${item.source}）`).join("\n") || "該�
 }
 backgroundは2〜3件、relatedは3件にしてください。`;
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {

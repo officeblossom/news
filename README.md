@@ -56,7 +56,7 @@ VercelのProject Settings → Environment Variablesに設定します。
 
 ```text
 GEMINI_API_KEY=Google AI Studioで発行したキー
-GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 `GEMINI_API_KEY`は任意です。設定しなくてもWikipediaとニュース検索は動作します。APIキーをGitHubへコミットしたり、`NEXT_PUBLIC_`を付けたりしないでください。
