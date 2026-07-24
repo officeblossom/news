@@ -184,7 +184,7 @@ backgroundは2〜3件、relatedは3件にしてください。`;
         generationConfig: {
           temperature: 0.2,
           responseMimeType: "application/json",
-          maxOutputTokens: 1600,
+          maxOutputTokens: 4000,
         },
       }),
       cache: "no-store",
@@ -197,7 +197,10 @@ backgroundは2〜3件、relatedは3件にしてください。`;
   }
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return null;
+  if (!text) {
+    console.warn("Gemini API returned no text:", JSON.stringify(data).slice(0, 800));
+    return null;
+  }
 
   try {
     const parsed = JSON.parse(text);
@@ -217,7 +220,8 @@ backgroundは2〜3件、relatedは3件にしてください。`;
       sources: wiki ? [{ title: `Wikipedia「${wiki.title}」`, url: wiki.url }] : [],
       generatedBy: "gemini" as const,
     };
-  } catch {
+  } catch (error) {
+    console.warn("Gemini JSON fallback:", error instanceof Error ? error.message : "invalid response");
     return null;
   }
 }
