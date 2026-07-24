@@ -11,7 +11,9 @@ type Entry = {
   analogy: string;
   background: { title: string; text: string }[];
   related: { term: string; text: string }[];
-  news: { source: string; title: string; summary: string; time: string }[];
+  news: { source: string; title: string; summary: string; time: string; url?: string }[];
+  sources?: { title: string; url: string }[];
+  generatedBy?: "gemini" | "wikipedia";
 };
 
 const entries: Record<string, Entry> = {
@@ -258,8 +260,8 @@ function shuffled<T>(values: T[]) {
   return [...values].sort(() => Math.random() - 0.5);
 }
 
-function makeQuizQuestion(term: string): QuizQuestion {
-  const correctText = entries[term].oneLine;
+function makeQuizQuestion(term: string, availableEntries: Record<string, Entry>): QuizQuestion {
+  const correctText = availableEntries[term].oneLine;
   const wrong = shuffled(
     trendingTerms.filter((candidate) => candidate !== term).map((candidate) => entries[candidate].oneLine),
   ).slice(0, 3);
@@ -275,6 +277,10 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("関税");
   const [searched, setSearched] = useState(true);
+  const [dynamicEntries, setDynamicEntries] = useState<Record<string, Entry>>({});
+  const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [fallbackUsed, setFallbackUsed] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [quizTerms, setQuizTerms] = useState<string[]>([]);
   const [quizIndex, setQuizIndex] = useState(0);
@@ -282,48 +288,91 @@ export default function Home() {
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
-  const entry = useMemo(() => entries[active] ?? entries["関税"], [active]);
+  const availableEntries = useMemo(() => ({ ...entries, ...dynamicEntries }), [dynamicEntries]);
+  const entry = useMemo(() => availableEntries[active] ?? entries["関税"], [active, availableEntries]);
 
   useEffect(() => {
     let savedHistory: string[] = [];
+    let restoredEntries: Record<string, Entry> = {};
     try {
       const saved = JSON.parse(localStorage.getItem("kotonoha-history") ?? "[]");
-      if (Array.isArray(saved)) {
-        savedHistory = saved.filter((word) => typeof word === "string" && entries[word]).slice(0, 10);
+      if (Array.isArray(saved)) savedHistory = saved.filter((word) => typeof word === "string").slice(0, 10);
+      const cached = JSON.parse(localStorage.getItem("kotonoha-cache") ?? "{}");
+      if (cached && typeof cached === "object") {
+        const now = Date.now();
+        restoredEntries = Object.fromEntries(
+          Object.entries(cached)
+            .filter(([, value]) => {
+              const item = value as { savedAt?: number; entry?: Entry };
+              return item?.entry && item.savedAt && now - item.savedAt < 7 * 24 * 60 * 60 * 1000;
+            })
+            .map(([term, value]) => [term, (value as { entry: Entry }).entry]),
+        );
       }
     } catch {}
-    const timer = window.setTimeout(() => setHistory(savedHistory), 0);
+    const timer = window.setTimeout(() => {
+      setHistory(savedHistory);
+      setDynamicEntries(restoredEntries);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  function search(value: string) {
+  async function search(value: string) {
     const clean = value.trim();
     if (!clean) return;
-    const matched = entries[clean] ? clean : "関税";
-    setActive(matched);
     setQuery(clean);
     setSearched(true);
-    if (entries[clean]) {
-      setHistory((current) => {
-        const next = [clean, ...current.filter((word) => word !== clean)].slice(0, 10);
-        localStorage.setItem("kotonoha-history", JSON.stringify(next));
-        return next;
-      });
+    setSearchError("");
+    setFallbackUsed(false);
+    if (availableEntries[clean]) {
+      setActive(clean);
+    } else {
+      setLoading(true);
+      setTimeout(() => document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+      try {
+        const response = await fetch("/api/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ term: clean }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.entry) throw new Error(data.error || "検索できませんでした。");
+        setDynamicEntries((current) => {
+          const next = { ...current, [clean]: data.entry as Entry };
+          try {
+            const stored = JSON.parse(localStorage.getItem("kotonoha-cache") ?? "{}");
+            stored[clean] = { entry: data.entry, savedAt: Date.now() };
+            localStorage.setItem("kotonoha-cache", JSON.stringify(stored));
+          } catch {}
+          return next;
+        });
+        setFallbackUsed(Boolean(data.fallback));
+        setActive(clean);
+      } catch (error) {
+        setSearchError(error instanceof Error ? error.message : "検索できませんでした。");
+      } finally {
+        setLoading(false);
+      }
     }
+    setHistory((current) => {
+      const next = [clean, ...current.filter((word) => word !== clean)].slice(0, 10);
+      localStorage.setItem("kotonoha-history", JSON.stringify(next));
+      return next;
+    });
     setTimeout(() => document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    search(query);
+    void search(query);
   }
 
   function startQuiz() {
-    const source = Array.from(new Set([...history, ...trendingTerms]));
+    const source = Array.from(new Set([...history, ...trendingTerms])).filter((term) => availableEntries[term]);
     const selected = shuffled(source).slice(0, 10);
     setQuizTerms(selected);
     setQuizIndex(0);
-    setQuizQuestion(makeQuizQuestion(selected[0]));
+    setQuizQuestion(makeQuizQuestion(selected[0], availableEntries));
     setQuizAnswer(null);
     setQuizScore(0);
     setQuizFinished(false);
@@ -344,7 +393,7 @@ export default function Home() {
       return;
     }
     setQuizIndex(nextIndex);
-    setQuizQuestion(makeQuizQuestion(quizTerms[nextIndex]));
+    setQuizQuestion(makeQuizQuestion(quizTerms[nextIndex], availableEntries));
     setQuizAnswer(null);
   }
 
@@ -378,7 +427,7 @@ export default function Home() {
         </form>
         <div className="suggestions">
           <span>よく調べられています</span>
-          {suggestions.map((word) => <button key={word} onClick={() => search(word)}>#{word}</button>)}
+          {suggestions.map((word) => <button key={word} onClick={() => void search(word)}>#{word}</button>)}
         </div>
         <div className="scroll-hint"><span>SCROLL</span><i /></div>
       </section>
@@ -393,7 +442,7 @@ export default function Home() {
         </div>
         <div className="monthly-grid">
           {trendingTerms.map((word, index) => (
-            <button key={word} type="button" onClick={() => search(word)}>
+            <button key={word} type="button" onClick={() => void search(word)}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <div><small>{entries[word].category}</small><b>{word}</b><p>{entries[word].oneLine}</p></div>
               <i>→</i>
@@ -405,9 +454,16 @@ export default function Home() {
 
       {searched && (
         <section className="result" id="result">
-          {!entries[query.trim()] && query.trim() && query.trim() !== active && (
-            <div className="demo-note">「{query}」のリアルタイム解説は準備中です。デモとして「関税」の解説を表示しています。</div>
+          {loading && <div className="search-status" role="status"><span className="loading-dot" />「{query}」をWikipediaと最近のニュースから調べています…</div>}
+          {searchError && <div className="search-error" role="alert">{searchError} <a href={`https://www.google.com/search?q=${encodeURIComponent(query)}`} target="_blank" rel="noreferrer">Googleで調べる ↗</a></div>}
+          {!loading && !searchError && entry.generatedBy && (
+            <div className="source-note">
+              <b>{entry.generatedBy === "gemini" ? "AIと公開情報で解説しました" : "無料の公開情報で解説しました"}</b>
+              <span>{fallbackUsed || entry.generatedBy === "wikipedia" ? "AI無料枠を使えない場合も、Wikipediaと最新ニュースから回答を表示しています。" : "Wikipediaと直近30日のニュースをもとにしています。"}</span>
+            </div>
           )}
+          {!loading && !searchError && (
+          <>
           <div className="result-head">
             <div>
               <span className="category">{entry.category}</span>
@@ -449,7 +505,7 @@ export default function Home() {
               <div className="number">03</div>
               <p className="section-label">いっしょに覚える関連語</p>
               {entry.related.map((item) => (
-                <button key={item.term} type="button" onClick={() => entries[item.term] && search(item.term)}>
+                <button key={item.term} type="button" onClick={() => void search(item.term)}>
                   <span><b>{item.term}</b><small>{item.text}</small></span><i>↗</i>
                 </button>
               ))}
@@ -463,14 +519,17 @@ export default function Home() {
             </div>
             <div className="news-grid">
               {entry.news.map((item, index) => (
-                <a className="news-card" key={item.title} href={newsUrl(entry.term, item.title)} target="_blank" rel="noreferrer">
+                <a className="news-card" key={item.title} href={item.url || newsUrl(entry.term, item.title)} target="_blank" rel="noreferrer">
                   <div className={`news-visual visual-${index + 1}`}><span>{entry.category}</span><b>{index === 0 ? "NEWS" : index === 1 ? "TOPIC" : "GUIDE"}</b></div>
                   <div className="news-body"><div><b>{item.source}</b><time>{item.time}</time></div><h4>{item.title}</h4><p>{item.summary}</p><span className="read-more">記事を読む <i>→</i></span></div>
                 </a>
               ))}
             </div>
             <p className="news-caution">※ 記事リンクはGoogleニュースの検索結果を開きます。情報は時間とともに更新されます。</p>
+            {entry.sources?.length ? <div className="sources"><b>解説の参考資料</b>{entry.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a>)}</div> : null}
           </section>
+          </>
+          )}
         </section>
       )}
 
@@ -514,8 +573,8 @@ export default function Home() {
                   {quizAnswer === quizQuestion.correct ? "正解！" : "おしい！"}
                 </div>
                 <div>
-                  <h3>{quizQuestion.term}<small>{entries[quizQuestion.term].reading}</small></h3>
-                  <p>{entries[quizQuestion.term].meaning}</p>
+                  <h3>{quizQuestion.term}<small>{availableEntries[quizQuestion.term].reading}</small></h3>
+                  <p>{availableEntries[quizQuestion.term].meaning}</p>
                 </div>
                 <button type="button" onClick={nextQuiz}>{quizIndex + 1 === quizTerms.length ? "結果を見る" : "次の問題"} →</button>
               </div>
@@ -537,6 +596,7 @@ export default function Home() {
       <section className="howto" id="howto">
         <p className="section-label">コトノハの使い方</p>
         <div><b>1</b><span>気になる言葉を入力</span><i>→</i><b>2</b><span>意味と背景を理解</span><i>→</i><b>3</b><span>ニュースで確かめる</span></div>
+        <p className="privacy-note">入力内容は解説のため外部サービスへ送信される場合があります。氏名・住所・電話番号などの個人情報は入力しないでください。AIの回答には誤りが含まれることがあるため、重要な判断ではリンク先の一次情報もご確認ください。</p>
       </section>
       <footer><span>コトノハ</span><p>ニュースが少しわかると、世界はもっとおもしろい。</p><small>© 2026 KOTONOHA</small></footer>
     </main>

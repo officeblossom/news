@@ -38,3 +38,25 @@ pnpm start
 ## Vercel
 
 GitHubリポジトリをVercelへインポートすると、Next.jsプロジェクトとして自動認識されます。特別な環境変数は必要ありません。
+# コトノハ
+
+ニュースに出てくる難しい言葉を、中学生にもわかる日本語で解説するNext.jsアプリです。
+
+## 無料検索の仕組み
+
+- 登録済みの主要語は静的データから即時表示
+- 任意の言葉はWikipediaとGoogleニュースRSSから最新情報を取得
+- `GEMINI_API_KEY`がある場合はGeminiでやさしい説明に編集
+- API未設定・無料枠超過・障害時はWikipediaベースの解説へ自動切り替え
+- 動的な検索結果はブラウザに7日間保存
+
+## 環境変数
+
+VercelのProject Settings → Environment Variablesに設定します。
+
+```text
+GEMINI_API_KEY=Google AI Studioで発行したキー
+GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+`GEMINI_API_KEY`は任意です。設定しなくてもWikipediaとニュース検索は動作します。APIキーをGitHubへコミットしたり、`NEXT_PUBLIC_`を付けたりしないでください。

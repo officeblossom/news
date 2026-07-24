@@ -35,6 +35,14 @@ nav a:hover { color:var(--green); }
 .scroll-hint i { height:36px; border-left:1px solid #9ca49e; margin-top:7px; }
 .result { max-width:1160px; margin:auto; padding:100px 30px; scroll-margin-top:20px; }
 .demo-note { padding:12px 18px; border-radius:4px; background:#fff1d9; color:#79531c; font-size:13px; margin-bottom:25px; }
+.search-status,.search-error,.source-note { padding:16px 19px; border-radius:5px; font-size:13px; margin-bottom:25px; }
+.search-status { display:flex; align-items:center; gap:12px; background:#eaf4ee; color:var(--green); }
+.loading-dot { width:14px; height:14px; border:2px solid #9fc5b3; border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; }
+.search-error { background:#fff0ed; color:#8a382e; }
+.search-error a { font-weight:700; text-decoration:underline; margin-left:8px; }
+.source-note { display:flex; flex-wrap:wrap; gap:7px 18px; background:#edf5f0; border-left:3px solid var(--green); color:#516159; }
+.source-note b { color:var(--green); }
+@keyframes spin { to { transform:rotate(360deg); } }
 .result-head { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:34px; border-bottom:1px solid var(--line); padding-bottom:26px; }
 .category { display:inline-block; color:white; background:var(--orange); font-size:11px; font-weight:700; padding:2px 10px; border-radius:2px; margin-bottom:8px; }
 .result-head h2 { font-family:var(--font-jp-serif),"Yu Mincho",serif; font-size:46px; line-height:1.2; margin:0; letter-spacing:.06em; }
@@ -85,6 +93,9 @@ nav a:hover { color:var(--green); }
 .read-more { display:flex; justify-content:space-between; margin-top:18px; border-top:1px solid #e5e7e4; padding-top:12px; color:var(--green); font-size:11px; font-weight:700; }
 .read-more i { font-style:normal; }
 .news-caution { font-size:10px; color:#8a918d; margin-top:15px; }
+.sources { display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:11px; }
+.sources b { color:#6c756f; }
+.sources a { color:var(--green); font-weight:700; text-decoration:underline; }
 .monthly { max-width:1160px; margin:auto; padding:100px 30px 20px; scroll-margin-top:20px; }
 .monthly-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:40px; margin-bottom:40px; }
 .monthly-heading h2,.quiz-intro h2 { font-family:var(--font-jp-serif),"Yu Mincho",serif; font-size:clamp(32px,4.5vw,52px); line-height:1.45; margin:0; letter-spacing:.04em; }
@@ -145,6 +156,7 @@ nav a:hover { color:var(--green); }
 .howto b { background:var(--green); color:white; border-radius:50%; width:30px; height:30px; display:grid; place-items:center; font-size:12px; }
 .howto span { font-weight:700; font-size:13px; }
 .howto i { color:#a8aea9; font-style:normal; margin:0 15px; }
+.privacy-note { max-width:760px; margin:30px auto 0; color:#7b827d; font-size:10px; line-height:1.8; }
 footer { min-height:190px; background:#142c22; color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 footer span { font-family:var(--font-jp-serif),serif; font-size:24px; letter-spacing:.18em; }
 footer p { color:#9cb3a7; font-size:11px; }
