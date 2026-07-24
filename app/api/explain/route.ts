@@ -172,10 +172,13 @@ backgroundは2〜3件、relatedは3件にしてください。`;
 
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -187,7 +190,11 @@ backgroundは2〜3件、relatedは3件にしてください。`;
       cache: "no-store",
     },
   );
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.warn("Gemini API fallback:", response.status, errorText.slice(0, 500));
+    return null;
+  }
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return null;
